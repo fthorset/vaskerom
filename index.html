@@ -278,13 +278,17 @@
   let pendingMachine = null, pendingHour = null;
 
   // ── Firebase REST helpers ──
+  function machineKey(machine) {
+    return machine === "tørketrommel" ? "torketrommel" : machine;
+  }
+
   async function dbGet() {
     try {
       const res = await fetch(`${DB}/bookings/${dateStr(dayOffset)}.json`);
       const data = await res.json();
       if (data) {
         state.vaskemaskin = data.vaskemaskin || {};
-        state["tørketrommel"] = data["tørketrommel"] || {};
+        state["tørketrommel"] = data.torketrommel || {};
       } else {
         state = { vaskemaskin: {}, "tørketrommel": {} };
       }
@@ -296,14 +300,14 @@
   }
 
   async function dbSet(machine, hour, value) {
-    await fetch(`${DB}/bookings/${dateStr(dayOffset)}/${machine}/${hour}.json`, {
+    await fetch(`${DB}/bookings/${dateStr(dayOffset)}/${machineKey(machine)}/${hour}.json`, {
       method: "PUT",
       body: JSON.stringify(value),
     });
   }
 
   async function dbDelete(machine, hour) {
-    await fetch(`${DB}/bookings/${dateStr(dayOffset)}/${machine}/${hour}.json`, {
+    await fetch(`${DB}/bookings/${dateStr(dayOffset)}/${machineKey(machine)}/${hour}.json`, {
       method: "DELETE",
     });
   }
