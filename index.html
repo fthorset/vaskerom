@@ -203,6 +203,38 @@
       color: #999; margin-top: 20px;
     }
 
+    /* Info-boks */
+    .info-box {
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      margin-bottom: 20px;
+      overflow: hidden;
+    }
+    .info-box-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      cursor: pointer;
+      user-select: none;
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: #2c3e50;
+    }
+    .info-box-header:hover { background: #f7f8fa; }
+    .info-toggle { font-size: 0.8rem; color: #999; }
+    .info-content {
+      padding: 0 16px 14px;
+      font-size: 0.85rem;
+      color: #444;
+      line-height: 1.7;
+      display: none;
+    }
+    .info-content.open { display: block; }
+    .info-content ul { padding-left: 18px; margin-top: 6px; }
+    .info-content li { margin-bottom: 4px; }
+
     /* Chat */
     .chat-header {
       background: #2c3e50;
@@ -396,6 +428,25 @@
 
   <!-- Booking -->
   <div class="booking-section">
+
+    <!-- Info-boks -->
+    <div class="info-box">
+      <div class="info-box-header" onclick="toggleInfo()">
+        <span>ℹ️ Slik bruker du vaskerommet</span>
+        <span class="info-toggle" id="info-toggle">Vis ▾</span>
+      </div>
+      <div class="info-content" id="info-content">
+        <ul>
+          <li>Trykk på en grønn rute for å booke vaskemaskin eller tørketrommel</li>
+          <li>Du kan booke opptil <strong>3 timer sammenhengende</strong></li>
+          <li>Du kan booke opptil <strong>7 dager frem i tid</strong></li>
+          <li>Bookinger nullstilles automatisk ved midnatt</li>
+          <li>Blå rute betyr at det er din booking — trykk for å avbestille</li>
+          <li>Bruk oppslagstavlen til høyre for meldinger til naboene</li>
+        </ul>
+      </div>
+    </div>
+
     <div class="legend">
       <div class="legend-item"><div class="dot dot-free"></div> Ledig</div>
       <div class="legend-item"><div class="dot dot-booked"></div> Opptatt</div>
@@ -857,6 +908,14 @@
   document.getElementById("name-input").addEventListener("keydown", e => {
     if (e.key === "Enter") confirmBook();
   });
+
+  // Info-boks toggle
+  function toggleInfo() {
+    const content = document.getElementById("info-content");
+    const toggle = document.getElementById("info-toggle");
+    content.classList.toggle("open");
+    toggle.textContent = content.classList.contains("open") ? "Skjul ▴" : "Vis ▾";
+  }
 
   // Init
   updateDateUI();
