@@ -29,6 +29,27 @@
       opacity: 0.6;
     }
 
+    .date-nav {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      margin-top: 12px;
+    }
+    .nav-btn {
+      background: rgba(255,255,255,0.15);
+      border: none;
+      color: white;
+      font-size: 1.2rem;
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .nav-btn:hover { background: rgba(255,255,255,0.25); }
+    .nav-btn:disabled { opacity: 0.3; cursor: default; }
+    #nav-label { font-size: 0.9rem; min-width: 160px; text-align: center; }
+
     .container {
       max-width: 700px;
       margin: 24px auto;
@@ -163,6 +184,11 @@
   <h1>Vaskerom</h1>
   <p id="date-display"></p>
   <p class="sync-status" id="sync-status">Kobler til…</p>
+  <div class="date-nav">
+    <button class="nav-btn" id="prev-btn" onclick="changeDay(-1)">&#8592;</button>
+    <span id="nav-label"></span>
+    <button class="nav-btn" id="next-btn" onclick="changeDay(1)">&#8594;</button>
+  </div>
 </header>
 
 <div class="container">
@@ -207,7 +233,39 @@
   const HOURS = Array.from({length: 15}, (_, i) => i + 7); // 7–21
   const MACHINES = ["vaskemaskin", "tørketrommel"];
   const MAX_HOURS = 3;
-  const TODAY = new Date().toISOString().slice(0, 10);
+
+  const days   = ["søndag","mandag","tirsdag","onsdag","torsdag","fredag","lørdag"];
+  const months = ["januar","februar","mars","april","mai","juni","juli","august","september","oktober","november","desember"];
+
+  let dayOffset = 0; // 0 = i dag, 1 = i morgen, osv.
+
+  function getDate(offset) {
+    const d = new Date();
+    d.setDate(d.getDate() + offset);
+    return d;
+  }
+
+  function dateStr(offset) {
+    return getDate(offset).toISOString().slice(0, 10);
+  }
+
+  function updateDateUI() {
+    const d = getDate(dayOffset);
+    const TODAY = dateStr(0);
+    const label = dayOffset === 0 ? "I dag" : dayOffset === 1 ? "I morgen" :
+      `${days[d.getDay()]} ${d.getDate()}. ${months[d.getMonth()]}`;
+    document.getElementById("nav-label").textContent = label;
+    document.getElementById("date-display").textContent =
+      `${days[d.getDay()]} ${d.getDate()}. ${months[d.getMonth()]} ${d.getFullYear()}`;
+    document.getElementById("prev-btn").disabled = dayOffset <= 0;
+    document.getElementById("next-btn").disabled = dayOffset >= 7;
+  }
+
+  function changeDay(dir) {
+    dayOffset = Math.max(0, Math.min(7, dayOffset + dir));
+    updateDateUI();
+    dbGet();
+  }
 
   // Session ID — identifies this browser tab
   let SESSION = sessionStorage.getItem("vsession");
@@ -222,7 +280,7 @@
   // ── Firebase REST helpers ──
   async function dbGet() {
     try {
-      const res = await fetch(`${DB}/bookings/${TODAY}.json`);
+      const res = await fetch(`${DB}/bookings/${dateStr(dayOffset)}.json`);
       const data = await res.json();
       if (data) {
         state.vaskemaskin = data.vaskemaskin || {};
@@ -238,21 +296,21 @@
   }
 
   async function dbSet(machine, hour, value) {
-    await fetch(`${DB}/bookings/${TODAY}/${machine}/${hour}.json`, {
+    await fetch(`${DB}/bookings/${dateStr(dayOffset)}/${machine}/${hour}.json`, {
       method: "PUT",
       body: JSON.stringify(value),
     });
   }
 
   async function dbDelete(machine, hour) {
-    await fetch(`${DB}/bookings/${TODAY}/${machine}/${hour}.json`, {
+    await fetch(`${DB}/bookings/${dateStr(dayOffset)}/${machine}/${hour}.json`, {
       method: "DELETE",
     });
   }
 
   // ── Render ──
-  function isPast(h) { return new Date().getHours() >= h + 1; }
-  function isNow(h)  { return new Date().getHours() === h; }
+  function isPast(h) { return dayOffset === 0 && new Date().getHours() >= h + 1; }
+  function isNow(h)  { return dayOffset === 0 && new Date().getHours() === h; }
 
   function render() {
     const grid = document.getElementById("grid");
@@ -370,17 +428,11 @@
     if (e.key === "Enter") confirmBook();
   });
 
-  // Date header
-  const days = ["søndag","mandag","tirsdag","onsdag","torsdag","fredag","lørdag"];
-  const months = ["januar","februar","mars","april","mai","juni","juli","august","september","oktober","november","desember"];
-  const now = new Date();
-  document.getElementById("date-display").textContent =
-    `${days[now.getDay()]} ${now.getDate()}. ${months[now.getMonth()]} ${now.getFullYear()}`;
-
-  // Poll every 5 seconds for live updates
+  // Init
+  updateDateUI();
   dbGet();
   setInterval(dbGet, 5000);
-  setInterval(render, 60000); // update past-slots
+  setInterval(render, 60000);
 </script>
 </body>
 </html>
