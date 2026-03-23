@@ -251,8 +251,9 @@
     .chat-text {
       font-size: 0.85rem;
       color: #333;
-      line-height: 1.4;
+      line-height: 1.6;
       word-break: break-word;
+      white-space: normal;
     }
 
     .chat-empty {
@@ -727,7 +728,12 @@
   }
 
   function escHtml(str) {
-    return str.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+    return str
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/\n/g, "<br>")
+      .replace(/•\s?/g, "• ");
   }
 
   // Send on Ctrl+Enter in textarea
