@@ -301,6 +301,81 @@
     }
     .chat-send-btn:hover { opacity: 0.85; }
     .chat-send-btn:disabled { opacity: 0.4; cursor: default; }
+
+    /* Admin */
+    .chat-header { display: flex; align-items: center; justify-content: space-between; }
+    .admin-badge {
+      font-size: 0.7rem; background: #e74c3c;
+      color: white; padding: 2px 8px; border-radius: 10px;
+      cursor: pointer;
+    }
+
+    .admin-actions {
+      display: flex; gap: 6px; margin-top: 6px;
+    }
+    .admin-btn {
+      font-size: 0.75rem; padding: 3px 8px;
+      border: none; border-radius: 6px;
+      cursor: pointer; transition: opacity 0.15s;
+      font-family: inherit;
+    }
+    .admin-btn:hover { opacity: 0.8; }
+    .admin-delete { background: #fdecea; color: #c0392b; }
+    .admin-reply  { background: #eafaf1; color: #1a7a40; }
+
+    .chat-reply {
+      margin-top: 8px;
+      margin-left: 12px;
+      padding: 8px 10px;
+      background: #eef2f7;
+      border-left: 3px solid #2980b9;
+      border-radius: 6px;
+    }
+    .chat-reply .chat-name { color: #2980b9; font-size: 0.8rem; }
+    .chat-reply .chat-text { font-size: 0.82rem; }
+    .chat-reply .chat-time { font-size: 0.7rem; }
+
+    /* Admin login modal */
+    .admin-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45); z-index: 200;
+      align-items: center; justify-content: center;
+    }
+    .admin-overlay.active { display: flex; }
+    .admin-modal {
+      background: white; border-radius: 12px;
+      padding: 28px 24px; width: 90%; max-width: 320px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+    }
+    .admin-modal h2 { font-size: 1.1rem; margin-bottom: 16px; }
+    .admin-modal input {
+      width: 100%; padding: 10px 12px;
+      border: 1.5px solid #ddd; border-radius: 8px;
+      font-size: 0.95rem; margin-bottom: 10px; outline: none;
+      font-family: inherit;
+    }
+    .admin-modal input:focus { border-color: #2980b9; }
+    .admin-error { color: #e74c3c; font-size: 0.8rem; margin-bottom: 10px; display: none; }
+
+    /* Reply form */
+    .reply-form {
+      margin-top: 8px; display: none; flex-direction: column; gap: 6px;
+    }
+    .reply-form.open { display: flex; }
+    .reply-form textarea {
+      width: 100%; padding: 7px 10px;
+      border: 1.5px solid #ddd; border-radius: 8px;
+      font-size: 0.82rem; font-family: inherit;
+      outline: none; resize: none; min-height: 52px;
+    }
+    .reply-form textarea:focus { border-color: #2980b9; }
+    .reply-send-btn {
+      align-self: flex-end; padding: 5px 14px;
+      background: #2c3e50; color: white;
+      border: none; border-radius: 6px;
+      font-size: 0.8rem; font-weight: 600;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
@@ -337,7 +412,10 @@
 
   <!-- Chat -->
   <div class="chat-section">
-    <div class="chat-header">💬 Oppslagstavle</div>
+    <div class="chat-header">
+      <span>💬 Oppslagstavle</span>
+      <span id="admin-badge" style="display:none" class="admin-badge" onclick="adminLogout()">Admin ✕</span>
+    </div>
     <div class="chat-messages" id="chat-messages">
       <p class="chat-empty">Ingen meldinger ennå.</p>
     </div>
@@ -348,6 +426,19 @@
     </div>
   </div>
 
+</div>
+
+<!-- Admin login modal -->
+<div class="admin-overlay" id="admin-overlay">
+  <div class="admin-modal">
+    <h2>🔐 Admin-innlogging</h2>
+    <p class="admin-error" id="admin-error">Feil passord.</p>
+    <input type="password" id="admin-pw-input" placeholder="Passord" />
+    <div class="modal-buttons">
+      <button class="btn btn-cancel" onclick="closeAdminLogin()">Avbryt</button>
+      <button class="btn btn-primary" onclick="submitAdminLogin()">Logg inn</button>
+    </div>
+  </div>
 </div>
 
 <!-- Modal -->
@@ -374,6 +465,57 @@
 
 <script>
   const DB = "https://vaskerom-4c062-default-rtdb.europe-west1.firebasedatabase.app";
+  const ADMIN_PW = "dahlsogdamer";
+
+  // ── Admin ──
+  let isAdmin = sessionStorage.getItem("admin") === "1";
+
+  // Hidden trigger: klikk på tittelen 5 ganger
+  let adminClicks = 0, adminTimer = null;
+  document.querySelector("header h1").style.cursor = "default";
+  document.querySelector("header h1").addEventListener("click", () => {
+    adminClicks++;
+    clearTimeout(adminTimer);
+    adminTimer = setTimeout(() => adminClicks = 0, 2000);
+    if (adminClicks >= 5) { adminClicks = 0; openAdminLogin(); }
+  });
+
+  function openAdminLogin() {
+    document.getElementById("admin-pw-input").value = "";
+    document.getElementById("admin-error").style.display = "none";
+    document.getElementById("admin-overlay").classList.add("active");
+    setTimeout(() => document.getElementById("admin-pw-input").focus(), 100);
+  }
+
+  function closeAdminLogin() {
+    document.getElementById("admin-overlay").classList.remove("active");
+  }
+
+  function submitAdminLogin() {
+    const pw = document.getElementById("admin-pw-input").value;
+    if (pw === ADMIN_PW) {
+      isAdmin = true;
+      sessionStorage.setItem("admin", "1");
+      closeAdminLogin();
+      document.getElementById("admin-badge").style.display = "inline";
+      renderChat();
+    } else {
+      document.getElementById("admin-error").style.display = "block";
+    }
+  }
+
+  function adminLogout() {
+    isAdmin = false;
+    sessionStorage.removeItem("admin");
+    document.getElementById("admin-badge").style.display = "none";
+    renderChat();
+  }
+
+  document.getElementById("admin-pw-input").addEventListener("keydown", e => {
+    if (e.key === "Enter") submitAdminLogin();
+  });
+
+  if (isAdmin) document.getElementById("admin-badge").style.display = "inline";
   const HOURS = Array.from({length: 15}, (_, i) => i + 7); // 7–21
   const MACHINES = ["vaskemaskin", "tørketrommel"];
   const MAX_HOURS = 3;
@@ -502,32 +644,83 @@
     btn.disabled = false;
   }
 
+  function formatTime(ts) {
+    const date = new Date(ts);
+    const day = date.getDate();
+    const month = months[date.getMonth()];
+    const hh = String(date.getHours()).padStart(2, "0");
+    const mm = String(date.getMinutes()).padStart(2, "0");
+    return `${day}. ${month} ${hh}:${mm}`;
+  }
+
   function renderChat() {
     const container = document.getElementById("chat-messages");
-    if (chatMessages.length === 0) {
+
+    // Skill ut toppnivå-meldinger og svar
+    const topLevel = chatMessages.filter(m => !m.replyTo);
+    const replies   = chatMessages.filter(m =>  m.replyTo);
+
+    if (topLevel.length === 0) {
       container.innerHTML = '<p class="chat-empty">Ingen meldinger ennå.</p>';
       return;
     }
 
-    container.innerHTML = chatMessages.map(m => {
-      const date = new Date(m.ts);
-      const day = date.getDate();
-      const month = months[date.getMonth()];
-      const hh = String(date.getHours()).padStart(2, "0");
-      const mm = String(date.getMinutes()).padStart(2, "0");
-      const timeStr = `${day}. ${month} ${hh}:${mm}`;
+    container.innerHTML = topLevel.map(m => {
+      const adminHtml = isAdmin ? `
+        <div class="admin-actions">
+          <button class="admin-btn admin-reply"  onclick="toggleReplyForm('${m.key}')">↩ Svar</button>
+          <button class="admin-btn admin-delete" onclick="deleteMsg('${m.key}')">🗑 Slett</button>
+        </div>` : "";
+
+      const replyList = replies.filter(r => r.replyTo === m.key).map(r => `
+        <div class="chat-reply">
+          <div class="chat-message-header">
+            <span class="chat-name">Admin</span>
+            <span class="chat-time">${formatTime(r.ts)}</span>
+          </div>
+          <div class="chat-text">${escHtml(r.text)}</div>
+          ${isAdmin ? `<div class="admin-actions"><button class="admin-btn admin-delete" onclick="deleteMsg('${r.key}')">🗑 Slett</button></div>` : ""}
+        </div>`).join("");
+
       return `
-        <div class="chat-message">
+        <div class="chat-message" id="msg-${m.key}">
           <div class="chat-message-header">
             <span class="chat-name">${escHtml(m.name)}</span>
-            <span class="chat-time">${timeStr}</span>
+            <span class="chat-time">${formatTime(m.ts)}</span>
           </div>
           <div class="chat-text">${escHtml(m.text)}</div>
+          ${adminHtml}
+          ${replyList}
+          <div class="reply-form" id="reply-form-${m.key}">
+            <textarea placeholder="Skriv svar…" maxlength="300" id="reply-text-${m.key}"></textarea>
+            <button class="reply-send-btn" onclick="sendReply('${m.key}')">Send svar</button>
+          </div>
         </div>`;
     }).join("");
 
-    // Scroll to bottom
     container.scrollTop = container.scrollHeight;
+  }
+
+  function toggleReplyForm(key) {
+    const form = document.getElementById(`reply-form-${key}`);
+    form.classList.toggle("open");
+    if (form.classList.contains("open")) {
+      document.getElementById(`reply-text-${key}`).focus();
+    }
+  }
+
+  async function sendReply(parentKey) {
+    const text = document.getElementById(`reply-text-${parentKey}`).value.trim();
+    if (!text) return;
+    const msg = { name: "Admin", text, ts: Date.now(), replyTo: parentKey };
+    await fetch(`${DB}/chat.json`, { method: "POST", body: JSON.stringify(msg) });
+    await chatGet();
+  }
+
+  async function deleteMsg(key) {
+    if (!confirm("Slett denne meldingen?")) return;
+    await fetch(`${DB}/chat/${key}.json`, { method: "DELETE" });
+    await chatGet();
   }
 
   function escHtml(str) {
