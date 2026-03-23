@@ -516,7 +516,7 @@
   });
 
   if (isAdmin) document.getElementById("admin-badge").style.display = "inline";
-  const HOURS = Array.from({length: 15}, (_, i) => i + 7); // 7–21
+  const HOURS = Array.from({length: 17}, (_, i) => i + 7); // 7–23
   const MACHINES = ["vaskemaskin", "tørketrommel"];
   const MAX_HOURS = 3;
 
@@ -666,11 +666,11 @@
     }
 
     container.innerHTML = topLevel.map(m => {
-      const adminHtml = isAdmin ? `
+      const adminHtml = `
         <div class="admin-actions">
-          <button class="admin-btn admin-reply"  onclick="toggleReplyForm('${m.key}')">↩ Svar</button>
-          <button class="admin-btn admin-delete" onclick="deleteMsg('${m.key}')">🗑 Slett</button>
-        </div>` : "";
+          <button class="admin-btn admin-reply" onclick="toggleReplyForm('${m.key}')">↩ Svar</button>
+          ${isAdmin ? `<button class="admin-btn admin-delete" onclick="deleteMsg('${m.key}')">🗑 Slett</button>` : ""}
+        </div>`;
 
       const replyList = replies.filter(r => r.replyTo === m.key).map(r => `
         <div class="chat-reply">
@@ -692,6 +692,7 @@
           ${adminHtml}
           ${replyList}
           <div class="reply-form" id="reply-form-${m.key}">
+            <input type="text" placeholder="Ditt navn" maxlength="20" id="reply-name-${m.key}" style="padding:7px 10px;border:1.5px solid #ddd;border-radius:8px;font-size:0.82rem;font-family:inherit;outline:none;margin-bottom:4px;width:100%;" />
             <textarea placeholder="Skriv svar…" maxlength="300" id="reply-text-${m.key}"></textarea>
             <button class="reply-send-btn" onclick="sendReply('${m.key}')">Send svar</button>
           </div>
@@ -710,9 +711,11 @@
   }
 
   async function sendReply(parentKey) {
+    const name = document.getElementById(`reply-name-${parentKey}`).value.trim();
     const text = document.getElementById(`reply-text-${parentKey}`).value.trim();
-    if (!text) return;
-    const msg = { name: "Admin", text, ts: Date.now(), replyTo: parentKey };
+    if (!name || !text) return;
+    const displayName = isAdmin ? `${name} (Admin)` : name;
+    const msg = { name: displayName, text, ts: Date.now(), replyTo: parentKey };
     await fetch(`${DB}/chat.json`, { method: "POST", body: JSON.stringify(msg) });
     await chatGet();
   }
