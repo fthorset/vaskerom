@@ -408,7 +408,6 @@
     closeModal();
     render();
     await dbSet(machine, hour, booking);
-    await dbGet();
   }
 
   async function confirmCancel() {
@@ -417,7 +416,6 @@
     closeModal();
     render();
     await dbDelete(m, h);
-    await dbGet();
   }
 
   // Close on backdrop click
